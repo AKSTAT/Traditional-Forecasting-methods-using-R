@@ -1,0 +1,139 @@
+---
+title: "Traditional _forecasting"
+author: "ABDUL KHADER"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# PACKAGE
+
+```{r package}
+library(readxl)
+library(urca)
+library(lmtest)
+library(fpp2)
+library(forecast)
+library(TTR)
+library(dplyr)
+library(tseries)
+library(aTSA)
+```
+
+# FORECASTING: AAPL
+
+```{r }
+library(readxl)
+AAPL <- read_excel("AAPL.xlsx")
+
+str(AAPL) # To check the structure of the dataframe
+
+class = c(rep("TRAIN", 211), rep("TEST",53))
+
+str(class)
+
+AAPL = cbind(AAPL, class)
+AAPL
+
+
+train_data = subset(AAPL, class == 'TRAIN')
+
+test_data = subset(AAPL, class  == 'TEST')
+
+nrow(train_data); nrow(test_data)
+
+dat_ts <- ts(train_data[,5], start = c(2000,1), end = c(2017,07), frequency = 12)
+dat_ts
+
+
+
+mae <- function(actual,pred){
+
+  mae <- mean(abs(actual - pred))
+
+  return (mae)
+}
+
+RMSE <- function(actual,pred){
+
+  RMSE <- sqrt(mean((actual - pred)^2))
+
+  return (RMSE)
+}
+
+```
+
+## Naive Forecasting Method
+
+```{r GOLD Naive Forecasting Method}
+
+nav = naive(dat_ts, h = 53)
+
+summary(nav)
+
+####
+
+df_nav = as.data.frame(nav)
+
+mae(test_data$Close, df_nav$`Point Forecast`)
+RMSE(test_data$Close, df_nav$`Point Forecast`)
+```
+
+## Simple Exponential Smoothing
+
+```{r GOLD Simple Exponential Smoothing}
+se_model <- ses(dat_ts, h = 53)
+
+summary(se_model)
+
+###
+
+df_s = as.data.frame(se_model)
+
+mae(test_data$Close, df_s$`Point Forecast`)
+RMSE(test_data$Close, df_s$`Point Forecast`)
+```
+
+## Holt's Trend Method
+
+```{r GOLD Holts Trend Method}
+holt_model <- holt(dat_ts, h = 53)
+
+summary(holt_model)
+
+####
+df_h = as.data.frame(holt_model)
+
+mae(test_data$Close, df_h$`Point Forecast`)
+RMSE(test_data$Close, df_h$`Point Forecast`)
+```
+
+## ARIMA
+
+```{r GOLD ARIMA}
+
+arima_model_AIC <- auto.arima(dat_ts,stationary = FALSE, seasonal = FALSE, ic = "aic", stepwise = TRUE, trace = TRUE)
+
+summary(arima_model_AIC)
+
+###
+fore_arima = forecast::forecast(arima_model_AIC, h=53)
+
+df_arima = as.data.frame(fore_arima)
+df_arima
+
+mae(test_data$Close, df_arima$`Point Forecast`)
+RMSE(test_data$Close, df_arima$`Point Forecast`)
+```
+
+## Plot
+
+```{r}
+par(mfrow=c(2,2))
+plot(nav)
+plot(se_model)
+plot(holt_model)
+plot(fore_arima)
+```
